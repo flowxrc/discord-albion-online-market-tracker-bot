@@ -1,24 +1,15 @@
-const discord = require("discord.js");
 const config = require("./config.json");
-const commands = require("./commands");
+const discord = require("discord.js");
+const logger = require("./helpers/logger");
+const commandHelper = require("./helpers/commandHelper");
 
 const client = new discord.Client({ intents: [discord.GatewayIntentBits.Guilds] });
 
 client.once(discord.Events.ClientReady, (c) => {
-    console.log(`[Event: ClientReady] Logged in as ${c.user.tag}`);
-    commands.setup(client, config.token, config.applicationId);
+    logger.write(`[discord.Events.ClientReady] Logged in as ${c.user.tag}`);
+    commandHelper.registerCommands(client);
 });
 
-commands.handle(client);
+commandHelper.handleCommands(client);
 
 client.login(config.token);
-
-/*
-* config.json is ignored with git, to protect original's bot keys
-* structure:
-
-{
-    "token": "DISCORD_BOT_TOKEN",
-    "applicationId": "APP_ID"
-}
-*/
