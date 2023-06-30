@@ -46,6 +46,7 @@ module.exports = {
 
                 await rest.put(discord.Routes.applicationCommands(config.applicationId), { body: commands });
             } catch (error) {
+                await interaction.editReply("❌ Ошибка бота");
                 console.error(error);
             }
         })();

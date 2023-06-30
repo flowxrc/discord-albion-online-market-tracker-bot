@@ -10,13 +10,32 @@ const generateEmbeddedMarketData = (server, data) => {
 
     messageEmbed.setColor("#f5bd05");
     messageEmbed.setTitle("🪙 Золото");
-    messageEmbed.setDescription(`Сервер: ${server}\nПоследнее обновление данных: <t:${unixTimestamp(data.timestamp)}:F>`);
+    messageEmbed.setDescription(`Сервер: ${server}\nПоследнее обновление данных: <t:${unixTimestamp(data.timestamp)}:R>`);
     messageEmbed.addFields(
         { name: "Цена", value: `${prettyNumber(data.price)} <:albion_silver:1123705360264466621>` }
     );
-    messageEmbed.setTimestamp();
+    messageEmbed.setFooter({ text: "Albion Market Tracker Developed by @atflow", iconURL: "https://cdn.discordapp.com/app-icons/1122474494422962188/b8d122ace156a060310db939509772fa.png?size=128" });
 
     return messageEmbed;
+}
+
+const getLatestDataObject = (json) => {
+    let highestDate = 0;
+    let marketData;
+
+    for (let i = 0; i < json.length; i++) {
+        const marketDataIterator = json[i];
+
+        const timestamp = unixTimestamp(marketDataIterator.timestamp);
+
+        if (highestDate < timestamp) {
+            highestDate = timestamp;
+            marketData = marketDataIterator;
+            continue;
+        }
+    }
+
+    return marketData;
 }
 
 const executeCommand = async (interaction) => {
@@ -54,7 +73,7 @@ const executeCommand = async (interaction) => {
 
     logger.saveApiRequest(apiRequestUrl, apiJson);
 
-    const marketData = apiJson[0];
+    const marketData = getLatestDataObject(apiJson);
 
     if (!marketData) {
         logger.write("[discord.Events.InteractionCreate] Error when fetching API request");

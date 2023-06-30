@@ -45,20 +45,61 @@ const generateEmbeddedMarketData = (tier, name, variableName, enchantment, serve
 
     messageEmbed.setColor(tierData.color);
     messageEmbed.setTitle(name);
-    messageEmbed.setDescription(`Город: ${data.city}\nСервер: ${server}\nПоследнее обновление данных: <t:${Math.max(...apiLogDates)}:F>`);
+    messageEmbed.setDescription(`Город: ${data.city}\nСервер: ${server}\nПоследнее обновление данных: <t:${Math.max(...apiLogDates)}:R>`);
     messageEmbed.setThumbnail(`https://render.albiononline.com/v1/item/${variableName}`);
     messageEmbed.addFields(
-        { name: "Тир", value: tierData.name },
-        { name: "Зачарование", value: albion_data.enchantments[enchantment] },
-        { name: "Качество", value: albion_data.qualities[data.quality - 1] },
-        { name: "Минимальная цена продажи: ", value: `${prettyNumber(data.sell_price_min)} <:albion_silver:1123705360264466621>` },
-        { name: "Максимальная цена продажи: ", value: `${prettyNumber(data.sell_price_max)} <:albion_silver:1123705360264466621>` },
-        { name: "Минимальный заказ на покупку: ", value: `${prettyNumber(data.buy_price_min)} <:albion_silver:1123705360264466621>` },
-        { name: "Максимальный заказ на покупку: ", value: `${prettyNumber(data.buy_price_max)} <:albion_silver:1123705360264466621>` }
+        { name: "Тир", value: tierData.name, inline: true },
+        { name: "Зачарование", value: albion_data.enchantments[enchantment], inline: true },
+        { name: "Качество", value: albion_data.qualities[data.quality - 1], inline: true },
+        { name: "Минимальная цена продажи: ", value: `${prettyNumber(data.sell_price_min)} <:albion_silver:1123705360264466621>`, inline: true },
+        { name: "Максимальная цена продажи: ", value: `${prettyNumber(data.sell_price_max)} <:albion_silver:1123705360264466621>`, inline: true },
+        { name: " ", value: " " },
+        { name: "Минимальный заказ на покупку: ", value: `${prettyNumber(data.buy_price_min)} <:albion_silver:1123705360264466621>`, inline: true },
+        { name: "Максимальный заказ на покупку: ", value: `${prettyNumber(data.buy_price_max)} <:albion_silver:1123705360264466621>`, inline: true }
     );
-    messageEmbed.setTimestamp();
+    messageEmbed.setFooter({ text: "Albion Market Tracker Developed by @atflow", iconURL: "https://cdn.discordapp.com/app-icons/1122474494422962188/b8d122ace156a060310db939509772fa.png?size=128" });
 
     return messageEmbed;
+}
+
+const getLatestDataObject = (json) => {
+    let highestDate = 0;
+    let marketData;
+
+    for (let i = 0; i < json.length; i++) {
+        const marketDataIterator = json[i];
+
+        const sell_price_min_date = unixTimestamp(marketDataIterator.sell_price_min_date);
+        const sell_price_max_date = unixTimestamp(marketDataIterator.sell_price_max_date);
+        const buy_price_min_date = unixTimestamp(marketDataIterator.buy_price_min_date);
+        const buy_price_max_date = unixTimestamp(marketDataIterator.buy_price_max_date);
+
+        if (highestDate < sell_price_min_date) {
+            highestDate = sell_price_min_date;
+            marketData = marketDataIterator;
+            continue;
+        }
+
+        if (highestDate < sell_price_max_date) {
+            highestDate = sell_price_max_date;
+            marketData = marketDataIterator;
+            continue;
+        }
+
+        if (highestDate < buy_price_min_date) {
+            highestDate = buy_price_min_date;
+            marketData = marketDataIterator;
+            continue;
+        }
+
+        if (highestDate < buy_price_max_date) {
+            highestDate = buy_price_max_date;
+            marketData = marketDataIterator;
+            continue;
+        }
+    }
+
+    return marketData;
 }
 
 const executeCommand = async (interaction) => {
@@ -105,20 +146,12 @@ const executeCommand = async (interaction) => {
         return await interaction.editReply("❌ Ошибка API");
     }
 
-    if (!apiJson || apiJson.length < 1) {
-        logger.write("[discord.Events.InteractionCreate] Error when fetching API request");
-        return await interaction.editReply("❌ Ошибка API");
-    }
-
-    console.log(apiRequest.body._read());
     logger.saveApiRequest(apiRequestUrl, apiJson);
 
-    const marketData = apiJson[0];
+    let marketData = getLatestDataObject(apiJson);
 
-    if (!marketData) {
-        logger.write("[discord.Events.InteractionCreate] Error when fetching API request");
-        return await interaction.editReply("❌ Ошибка API");
-    }
+    if (!marketData)
+        return await interaction.editReply("❌ Не найдено логов о предмете");
 
     const embed = generateEmbeddedMarketData(tier, item.LocalizedNames["RU-RU"], itemVariableName, enchantment, server, marketData);
 
